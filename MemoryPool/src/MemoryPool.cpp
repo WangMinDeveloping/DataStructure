@@ -1,30 +1,30 @@
-#include"MemoryPool.h"
-CMemoryPool::CMemoryPool(int iCount,int iSize)
+#include "MemoryPool.h"
+CMemoryPool::CMemoryPool(int iCount, int iSize)
 {
-	pMemory=new char[iSize*iCount];
-	pStackArray=(void* (*)[])new void*[iCount]();
-	for(iStackTop=0;iStackTop<iCount;iStackTop++) //栈顶下标代表栈中的元素个数
-		(*pStackArray)[iStackTop]=(void*)(pMemory+iStackTop*iSize);//将分配好的空间按每Size大小的块内存的地址入栈
-	iMaximum=iCount;
-	pMaxAddress=pMemory+(iMaximum-1)*iSize;
+        pMemory = new char[iSize * iCount];
+        pStackArray = (void *(*)[]) new void *[iCount]();
+        for (iStackTop = 0; iStackTop < iCount; iStackTop++)                       // iStackTop 栈顶下标代表栈中的元素个数
+                (*pStackArray)[iStackTop] = (void *)(pMemory + iStackTop * iSize); // 将分配好的空间按每Size大小的块内存的地址入栈
+        iMaximum = iCount;
+        pMaxAddress = pMemory + (iMaximum - 1) * iSize;
 }
 
 CMemoryPool::~CMemoryPool()
 {
-	delete []pMemory;
-	delete []pStackArray;
-	pStackArray=0;
-	pMemory=0;
+        delete[] pMemory;
+        delete[] pStackArray;
+        pStackArray = 0;
+        pMemory = 0;
 }
 
-void* CMemoryPool::getMinAddress()
+void *CMemoryPool::getMinAddress()
 {
-	return (void *)pMemory;
+        return (void *)pMemory;
 }
 
-void* CMemoryPool::getMaxAddress()
+void *CMemoryPool::getMaxAddress()
 {
-	return (void *)pMaxAddress;
+        return (void *)pMaxAddress;
 }
 
 /***********************************************************
@@ -34,9 +34,9 @@ void* CMemoryPool::getMaxAddress()
  ***********************************************************/
 int CMemoryPool::push(void *pMember)
 {
-	//正确版本
- 	   int full=1;
-           asm("\
+        // 正确版本
+        int full = 1;
+        asm("\
            movl %4,%%ecx; /*最大栈长*/\
            mov %3,%%r9;/*需要入栈的数据*/\
            movq %5,%%r10;/*队列数组首字节地址*/ \
@@ -55,11 +55,11 @@ addMember: mov $0,%%rax;\
 	   lock cmpxchg %%r9,(%%r11);\
 	   jnz addMember;\
 	   mov $0,%%eax;\
-  pushExit:movl %%eax,%1;"\
-           :"=m"(iStackTop),"=m"(full)\
-           :"m"(iStackTop),"m"(pMember),"m"(iMaximum),"m"(pStackArray)\
-           :"%rax","%rcx","rdx","%r9","%r11","%r10","%r14");
-	return full;
+  pushExit:movl %%eax,%1;"
+            : "=m"(iStackTop), "=m"(full)
+            : "m"(iStackTop), "m"(pMember), "m"(iMaximum), "m"(pStackArray)
+            : "%rax", "%rcx", "rdx", "%r9", "%r11", "%r10", "%r14");
+        return full;
 }
 /********************************************************
   出栈函数
@@ -67,11 +67,11 @@ addMember: mov $0,%%rax;\
   返回值：大于1：出队指针；0；队空
  ********************************************************/
 
-void* CMemoryPool::pop()
+void *CMemoryPool::pop()
 {
-	//最后版本
-	void *pMember=0;
-	 asm volatile("\
+        // 最后版本
+        void *pMember = 0;
+        asm volatile("\
                         movl %3,%%ecx; /*最大栈长*/\
                         movq %4,%%r10;/*队列数组首字节地址*/ \
                         mov %2,%%eax;  /*栈顶下标*/ \
@@ -89,10 +89,9 @@ void* CMemoryPool::pop()
 	      outMember:xchg (%%r11),%%rax;\
 			test %%rax,%%rax;\
 			jz outMember;\
-     	         popExit:mov %%rax,%1;"\
-                        /*sti; 开中断*/ \
-                        :"+m"(iStackTop),"=m"(pMember)\
-                        :"m"(iStackTop),"m"(iMaximum),"m"(pStackArray)\
-                        :"%rax","%rcx","%r10","%r11","%r14");
-	 return pMember;
+     	         popExit:mov %%rax,%1;" /*sti; 开中断*/
+                     : "+m"(iStackTop), "=m"(pMember)
+                     : "m"(iStackTop), "m"(iMaximum), "m"(pStackArray)
+                     : "%rax", "%rcx", "%r10", "%r11", "%r14");
+        return pMember;
 }

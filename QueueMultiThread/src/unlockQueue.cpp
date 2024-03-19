@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstring>
 #include <unistd.h>
+using namespace unlockQueue;
 Queue::Queue()
 {
 	llFront = 0;
@@ -16,7 +17,7 @@ Queue::~Queue()
 
 }
 
-bool Queue::init(int iQueueLen)
+bool Queue::initialize(int iQueueLen)
 {
 	pArray=(void* (*)[])new void*[iQueueLen]();
 	memset(pArray,0,sizeof(void*)*iQueueLen);
@@ -45,32 +46,10 @@ int Queue::getQueueMemberCount()
 	return llRear-llFront;
 }
 
-int Queue::_enQueue(void *pMember)
+int Queue::enQueue(void *pMember)
 {
-	//嵌入汇编版本
-	asm volatile("loopEn:");
-	if (llRear - llFront == iMaximum)
-	{
-		return 1;
-	}
-	else
-	{
-		int subscript = llRear % iMaximum;
-		void* p_current_subscript_addr= &(*pArray)[subscript];
-		asm volatile("mov $0,%%rax;\
-					mov %1,%%r9;\
-					mov %2,%%r10;\
-					lock cmpxchgq %%r9,(%%r10);\
-					jnz loopEn;\
-					lock incq %0;"\
-					:"=m"(llRear)\
-					:"m"(pMember),"m"(p_current_subscript_addr)\
-					:"%r9","%r10","%rax");
-		return 0;
-	}
-	
 	//纯汇编版本
-	// asm volatile("\
+	asm volatile("\
 			movl %3,%%ecx; /*最大队长*/\
             movq %2,%%r9;/*需要入队的数据*/\
 			mov %1,%%r14;  /*队尾序号*/ \
@@ -102,34 +81,11 @@ int Queue::_enQueue(void *pMember)
 			:"%rax","%rbx","%rdx","%rcx","%r9","%r10","%r14","%r15");
 
 }
-void*  Queue::_deQueue()
-{
-	//嵌入汇编版
-	void* pValue = NULL;
-	asm volatile("loopDe:");
-	if (llRear == llFront)
-	{
-		return (void*)1;
-	}
-	else
-	{
-		int subscript = llFront % iMaximum;
-		void* p_current_subscript_addr = (*pArray)[subscript];
-		asm volatile("mov $0,%%rax;\
-					mov %2,%%r10;\
-					lock xchgq %%rax,(%%r10);\
-					test %%rax,%%rax;\
-					jz loopDe;\
-					lock incq %0;\
-					mov %%rax,%1;"\
-					:"=m"(llFront),"=m"(pValue)\
-					:"m"(p_current_subscript_addr)\
-					:"%r10","%rax");
-		return pValue;
-	}
 
+void*  Queue::deQueue()
+{
 	// 纯汇编版本
-	// asm volatile("\
+	asm volatile("\
 			movl %2,%%ecx; /*最大队长*/\
 			movslq %%ecx,%%rcx;\
 			mov %3,%%r14;  /*队头序号*/ \
