@@ -62,6 +62,7 @@ publish:
 	-$(shell mkdir $(INCLUDE_PATH) -p)
 	-$(shell cp ./doublyList.h $(INCLUDE_PATH) -p)
 	-$(shell cp ./doublyListNode.h $(INCLUDE_PATH) -p)
+	-$(shell cp ./doublyListIterator.h $(INCLUDE_PATH) -p)
 clean:
 	@echo " "
 	@echo "make clean"
